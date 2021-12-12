@@ -19,11 +19,13 @@
     "@types/react": "^17.0.35",
     "@types/react-dom": "^17.0.11",
     "core-js": "3.2.1",
-    "d3": "5.12.0",
+    "d3": "^3.5.5",
+    "nw": "^0.59.0",
     "powerbi-visuals-api": "~3.8.0",
     "powerbi-visuals-utils-dataviewutils": "2.2.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^16.0.2",
+    "react-contextmenu": "^2.14.0",
+    "react-dom": "^16.0.2"
   },
   "devDependencies": {
     "ts-loader": "6.1.0",
