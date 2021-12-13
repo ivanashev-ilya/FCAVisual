@@ -54,12 +54,13 @@ export class Visual implements IVisual {
     
         return VisualSettings.enumerateObjectInstances(this.settings || VisualSettings.getDefault(), options);
     }
-
+    
     constructor(options: VisualConstructorOptions) {
         this.reactRoot = React.createElement(ReactConceptLattice, {});
         this.target = options.element;
 
         ReactDOM.render(this.reactRoot, this.target);
+
     }
 
     private getObjects(attributes: Set<number>): number[] {
@@ -181,6 +182,8 @@ export class Visual implements IVisual {
         };
     }
 
+
+
     @logExceptions()
     public update(options: VisualUpdateOptions) {
         if(options.dataViews && options.dataViews[0]){
@@ -195,24 +198,62 @@ export class Visual implements IVisual {
 
             var objectsNames = new Array<String>();
 
+            var attrNames = [];
+            for (var column of dataView.table.columns) {
+                attrNames.push(column.displayName);
+                if (typeof column.identityExprs !== "undefined") {
+                    var obj = column.displayName;
+                }
+            }
+
+            var valuesDict = {};
             dataView.table.rows.forEach((row: DataViewTableRow) => {
                 var curRow = new Array<boolean>();
                 for (var i = 0; i < row.length; ++i) {
                     if (typeof dataView.table.columns[i].identityExprs === "undefined") {
-                        curRow.push(Boolean(row[i].valueOf()));
+                        var value = row[i].valueOf();
+                        if (i in valuesDict){
+                            if (!valuesDict[i].includes(value)) valuesDict[i].push(value);
+                        }   
+                        else valuesDict[i] = [value];  
+                    }
+                } 
+            });
+
+            var scAttrs = {}
+            for(var key in valuesDict) {
+                var val = valuesDict[key];
+                val.sort();
+                if (val[val.length-1] > 1) {
+                    var newRow = val.map((v) => attrNames[Number(key)] + '≤' + v);
+                    attrNames.splice(Number(key), 1);
+                    attrNames.push(...newRow);
+                    scAttrs[key] = val;
+                }
+            }
+            attrNames = attrNames.filter(n => n != obj);
+
+            dataView.table.rows.forEach((row: DataViewTableRow) => {
+                var curRow = new Array<boolean>();
+                for (var i = 0; i < row.length; ++i) {
+                    if (typeof dataView.table.columns[i].identityExprs === "undefined") {
+                        if (!(i in scAttrs)) {
+                            curRow.push(Boolean(row[i].valueOf()));
+                        }
                     } else {
                         objectsNames.push(row[i].valueOf().toString());
+                    }
+                }
+                for (var i = 0; i < row.length; ++i) {
+                    if (typeof dataView.table.columns[i].identityExprs === "undefined") {
+                        if (i in scAttrs) {
+                            for (const colValue of scAttrs[i]) curRow.push(row[i].valueOf() <= colValue);
+                        }
                     }
                 }
                 this.data.push(curRow);
             });
 
-            var attrNames = []
-            for (var column of dataView.table.columns) {
-                if (typeof column.identityExprs === "undefined") {
-                    attrNames.push(column.displayName);
-                }
-            }
 
             var commonAttrs = new Set<number>(this.getNewAttributes(new Set<number>()));
             this.concepts = [commonAttrs];

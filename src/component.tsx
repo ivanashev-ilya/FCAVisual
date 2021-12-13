@@ -193,3 +193,5 @@ export class ReactConceptLattice extends React.Component<{}, State>{
         ReactConceptLattice.updateCallback = null;
     }
 }
+
+
