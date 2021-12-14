@@ -1,3 +1,4 @@
+import { Numeric } from "d3-array";
 import * as React from "react";
 import { ContextMenu, MenuItem, ContextMenuTrigger } from "react-contextmenu";
 
@@ -29,6 +30,8 @@ export interface State {
     coords: Point[],
     conceptsAttributes: String[],
     conceptsObjects: String[],
+    objectsCount: number,
+    conceptsObjectsCount: number[],
     edges: Edge[]
     background?: string,
     lineThickness?: number
@@ -42,6 +45,8 @@ export const initialState: State = {
     coords: [],
     conceptsAttributes: [],
     conceptsObjects: [],
+    objectsCount: 0,
+    conceptsObjectsCount: [],
     edges: []
 }
 
@@ -66,9 +71,27 @@ export class ReactConceptLattice extends React.Component<{}, State>{
         ReactConceptLattice.update(this.state);
     }
 
+    setConfidenceConcept(id: number) {
+        this.confidenceConcept = id;
+        this.supportConcept = -1;
+        ReactConceptLattice.update(this.state);
+    }
+
+    setSupportConcept(id: number) {
+        this.supportConcept = id;
+        this.confidenceConcept = -1;
+        ReactConceptLattice.update(this.state);
+    }
+
     removeFilterAndIdeal() {
         this.idealConcept = -1;
         this.filterConcept = -1;
+        ReactConceptLattice.update(this.state);
+    }
+
+    removeAssociationRules() {
+        this.supportConcept = -1;
+        this.confidenceConcept = -1;
         ReactConceptLattice.update(this.state);
     }
 
@@ -97,9 +120,30 @@ export class ReactConceptLattice extends React.Component<{}, State>{
         this.dfs(start, adjacencyLists, nodes);
     }
 
+    addAssociationRules(concept, edges, coords, objectsCount, conceptsObjectsCount, type, shapes) {
+        for (var edge of edges) {
+            if (edge.beg == concept) {
+                if (type == "confidence") {
+                    var value = conceptsObjectsCount[edge.end] / conceptsObjectsCount[edge.beg];
+                } else {
+                    var value = conceptsObjectsCount[edge.end] / objectsCount;
+                }
+                const style: React.CSSProperties = {
+                    left: (coords[edge.beg].x + coords[edge.end].x) / 2,
+                    top: (coords[edge.beg].y + coords[edge.end].y) / 2,
+                    position: "absolute"
+                };
+                shapes.push(<div style={style}>
+                    <p style={{ color: "red", background: "white"}}>{value.toFixed(2)}</p>
+                </div>);
+            }
+        }
+    }
+
     render(){
         const { width, height, nodeWidth, nodeHeight, coords,
-            conceptsAttributes, conceptsObjects, edges, background, lineThickness } = this.state;
+            conceptsAttributes, conceptsObjects, objectsCount, conceptsObjectsCount,
+            edges, background, lineThickness } = this.state;
 
         var shapes = [
             <div>
@@ -116,6 +160,10 @@ export class ReactConceptLattice extends React.Component<{}, State>{
                 <ContextMenu id={"Background"}>
                     <MenuItem onClick={() => this.removeFilterAndIdeal()}>
                     Hide filter/ideal
+                    </MenuItem>
+                    <MenuItem divider />
+                    <MenuItem onClick={() => this.removeAssociationRules()}>
+                    Hide association rules info
                     </MenuItem>
                 </ContextMenu>
             </div>
@@ -161,13 +209,27 @@ export class ReactConceptLattice extends React.Component<{}, State>{
                         <MenuItem onClick={() => this.addFilter(i)}>
                         Draw filter
                         </MenuItem>
-                        <MenuItem divider />
                         <MenuItem onClick={() => this.addIdeal(i)}>
                         Draw ideal
+                        </MenuItem>
+                        <MenuItem divider />
+                        <MenuItem onClick={() => this.setConfidenceConcept(i)}>
+                        Show association rules confidence
+                        </MenuItem>
+                        <MenuItem onClick={() => this.setSupportConcept(i)}>
+                        Show association rules support
                         </MenuItem>
                     </ContextMenu>
                 </div>
             )
+        }
+
+        if (this.confidenceConcept != -1) {
+            this.addAssociationRules(this.confidenceConcept,  edges, coords,
+                objectsCount, conceptsObjectsCount, "confidence", shapes);
+        } else if (this.supportConcept != -1) {
+            this.addAssociationRules(this.supportConcept,  edges, coords,
+                objectsCount, conceptsObjectsCount, "support", shapes);
         }
 
         return <tbody>{shapes}</tbody>;
@@ -184,6 +246,8 @@ export class ReactConceptLattice extends React.Component<{}, State>{
     public state: State = initialState;
     public filterConcept: number = -1;
     public idealConcept: number = -1;
+    public confidenceConcept: number = -1;
+    public supportConcept: number = -1;
 
     public componentWillMount() {
         ReactConceptLattice.updateCallback = (newState: State): void => { this.setState(newState); };

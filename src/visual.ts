@@ -194,8 +194,6 @@ export class Visual implements IVisual {
             this.settings = VisualSettings.parse(dataView) as VisualSettings;
             const object = this.settings.conceptNode;
 
-            console.error(dataView.table.columns);
-
             var objectsNames = [];
             var rawAttrNames = [];
             var attrType = [];
@@ -230,11 +228,6 @@ export class Visual implements IVisual {
                 }
             });
 
-            console.error(rawData);
-            console.error(rawAttrNames);
-            console.error(attrType);
-            console.error(attrBoundaries);
-
             var attrNames = [];
             for (var i = 0; i < rawAttrNames.length; ++i) {
                 if (attrType[i] == "Numeric") {
@@ -246,8 +239,6 @@ export class Visual implements IVisual {
                     attrNames.push(rawAttrNames[i]);
                 }
             }
-
-            console.error(attrNames);
             
             this.data = []
             for (var i = 0; i < rawData[0].length; ++i) {
@@ -266,9 +257,6 @@ export class Visual implements IVisual {
                 this.data.push(newRow);
             }
 
-            console.error(this.data);
-
-
             var commonAttrs = new Set<number>(this.getNewAttributes(new Set<number>()));
             this.concepts = [commonAttrs];
             this.conceptsIds = new Map<string, number>();
@@ -285,6 +273,7 @@ export class Visual implements IVisual {
 
             var conceptsAttributes = new Array<String>();
             var conceptsObjects = new Array<String>();
+            var conceptsObjectsCount = new Array<number>();
             for (var i = 0; i < this.concepts.length; ++i) {
                 if (this.concepts[i].size == this.data[0].length) {
                     conceptsAttributes.push("[all]");
@@ -299,6 +288,7 @@ export class Visual implements IVisual {
                 }
                 
                 var objects = this.getObjects(this.concepts[i]);
+                conceptsObjectsCount.push(objects.length);
                 if (objects.length == this.data.length) {
                     conceptsObjects.push("[all]");
                 } else {
@@ -320,6 +310,8 @@ export class Visual implements IVisual {
                 coords: coords,
                 conceptsAttributes: conceptsAttributes,
                 conceptsObjects: conceptsObjects,
+                objectsCount: this.data.length,
+                conceptsObjectsCount: conceptsObjectsCount,
                 edges: edges,
                 lineThickness: object && object.lineThickness ? object.lineThickness : undefined,
                 background: object && object.rectangleColor ? object.rectangleColor : undefined
