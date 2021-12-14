@@ -32,6 +32,8 @@ import DataViewObjectsParser = dataViewObjectsParser.DataViewObjectsParser;
 export class ConceptNodeSettings {
     public rectangleColor: string = "white";
     public lineThickness: number = 2;
+    public hideObjectNames: boolean = false;
+    public hideAttributeNames: boolean = false;
 }
 
 export class VisualSettings extends DataViewObjectsParser {

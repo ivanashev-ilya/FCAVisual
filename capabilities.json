@@ -32,6 +32,20 @@
                     "type": {
                         "numeric": true
                     }
+                },
+                "hideObjectNames": {
+                    "displayName": "Hide object names",
+                    "description": "Replace object names with indices",
+                    "type": {
+                        "bool": true
+                    }
+                },
+                "hideAttributeNames": {
+                    "displayName": "Hide attribute names",
+                    "description": "Replace attribute names with indices",
+                    "type": {
+                        "bool": true
+                    }
                 }
             }
         }

@@ -177,7 +177,7 @@ export class Visual implements IVisual {
  
         return {
             coords: coords,
-            nodeWidth: 0.8 * width / maxSizeCount,
+            nodeWidth: 0.6 * width / maxSizeCount,
             nodeHeight: 0.8 * yStep
         };
     }
@@ -194,65 +194,79 @@ export class Visual implements IVisual {
             this.settings = VisualSettings.parse(dataView) as VisualSettings;
             const object = this.settings.conceptNode;
 
-            this.data = [];
+            console.error(dataView.table.columns);
 
-            var objectsNames = new Array<String>();
+            var objectsNames = [];
+            var rawAttrNames = [];
+            var attrType = [];
+            var rawData = [];
+            var attrBoundaries = {};
+            dataView.table.rows.forEach((row: DataViewTableRow) => {
+                var curRow = new Array<Number>();
+                var scaleBoundaries = new Array<Number>();
+                for (var i = 0; i < row.length; ++i) {
+                    var column = dataView.table.columns[i];
+                    if (row[i] != null) {
+                        var value = row[i].valueOf();
+                        if (!column.queryName.includes("Scales.")) {
+                            if (typeof column.identityExprs === "undefined") {
+                                objectsNames.push(column.displayName);
+                                curRow.push(Number(value));
+                            } else {
+                                var attrName = value.toString();
+                            }
+                        } else if (typeof column.identityExprs === "undefined") {
+                            scaleBoundaries.push(Number(value));
+                        }
+                    }
+                }
+                rawAttrNames.push(attrName);
+                rawData.push(curRow);
+                if (scaleBoundaries.length == 0) {
+                    attrType.push("Boolean");
+                } else {
+                    attrType.push("Numeric");
+                    attrBoundaries[attrName] = scaleBoundaries;
+                }
+            });
+
+            console.error(rawData);
+            console.error(rawAttrNames);
+            console.error(attrType);
+            console.error(attrBoundaries);
 
             var attrNames = [];
-            for (var column of dataView.table.columns) {
-                attrNames.push(column.displayName);
-                if (typeof column.identityExprs !== "undefined") {
-                    var obj = column.displayName;
+            for (var i = 0; i < rawAttrNames.length; ++i) {
+                if (attrType[i] == "Numeric") {
+                    var boundaries = attrBoundaries[rawAttrNames[i]];
+                    boundaries = boundaries.sort();
+                    var newRow = boundaries.map((v) => rawAttrNames[i] + '≤' + v);
+                    attrNames = attrNames.concat(newRow);
+                } else {
+                    attrNames.push(rawAttrNames[i]);
                 }
             }
 
-            var valuesDict = {};
-            dataView.table.rows.forEach((row: DataViewTableRow) => {
-                var curRow = new Array<boolean>();
-                for (var i = 0; i < row.length; ++i) {
-                    if (typeof dataView.table.columns[i].identityExprs === "undefined") {
-                        var value = row[i].valueOf();
-                        if (i in valuesDict){
-                            if (!valuesDict[i].includes(value)) valuesDict[i].push(value);
-                        }   
-                        else valuesDict[i] = [value];  
-                    }
-                } 
-            });
-
-            var scAttrs = {}
-            for(var key in valuesDict) {
-                var val = valuesDict[key];
-                val.sort();
-                if (val[val.length-1] > 1) {
-                    var newRow = val.map((v) => attrNames[Number(key)] + '≤' + v);
-                    attrNames.splice(Number(key), 1);
-                    attrNames.push(...newRow);
-                    scAttrs[key] = val;
-                }
-            }
-            attrNames = attrNames.filter(n => n != obj);
-
-            dataView.table.rows.forEach((row: DataViewTableRow) => {
-                var curRow = new Array<boolean>();
-                for (var i = 0; i < row.length; ++i) {
-                    if (typeof dataView.table.columns[i].identityExprs === "undefined") {
-                        if (!(i in scAttrs)) {
-                            curRow.push(Boolean(row[i].valueOf()));
+            console.error(attrNames);
+            
+            this.data = []
+            for (var i = 0; i < rawData[0].length; ++i) {
+                var newRow = [];
+                for (var j = 0; j < rawData.length; ++j) {
+                    var value = rawData[j][i];
+                    if (attrType[j] == "Numeric") {
+                        var boundaries = attrBoundaries[rawAttrNames[j]];
+                        for (var boundary of boundaries) {
+                            newRow.push(value <= boundary);
                         }
                     } else {
-                        objectsNames.push(row[i].valueOf().toString());
+                        newRow.push(Boolean(value));
                     }
                 }
-                for (var i = 0; i < row.length; ++i) {
-                    if (typeof dataView.table.columns[i].identityExprs === "undefined") {
-                        if (i in scAttrs) {
-                            for (const colValue of scAttrs[i]) curRow.push(row[i].valueOf() <= colValue);
-                        }
-                    }
-                }
-                this.data.push(curRow);
-            });
+                this.data.push(newRow);
+            }
+
+            console.error(this.data);
 
 
             var commonAttrs = new Set<number>(this.getNewAttributes(new Set<number>()));
@@ -275,18 +289,26 @@ export class Visual implements IVisual {
                 if (this.concepts[i].size == this.data[0].length) {
                     conceptsAttributes.push("[all]");
                 } else {
-                    conceptsAttributes.push("[" + [...this.concepts[i]].map((id: number) => {
-                        return attrNames[id];
-                    }).join() + "]");
+                    if (object.hideAttributeNames) {
+                        conceptsAttributes.push("[" + [...this.concepts[i]].map(String).join() + "]");
+                    } else {
+                        conceptsAttributes.push("[" + [...this.concepts[i]].map((id: number) => {
+                            return attrNames[id];
+                        }).join() + "]");
+                    }
                 }
                 
                 var objects = this.getObjects(this.concepts[i]);
                 if (objects.length == this.data.length) {
                     conceptsObjects.push("[all]");
                 } else {
-                    conceptsObjects.push("[" + objects.map((id: number) => {
-                        return objectsNames[id];
-                    }).join() + "]");
+                    if (object.hideObjectNames) {
+                        conceptsObjects.push("[" + objects.map(String).join() + "]");
+                    } else {
+                        conceptsObjects.push("[" + objects.map((id: number) => {
+                            return objectsNames[id];
+                        }).join() + "]");
+                    }
                 }
             }
         

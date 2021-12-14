@@ -20,7 +20,6 @@
     "@types/react-dom": "^17.0.11",
     "core-js": "3.2.1",
     "d3": "^3.5.5",
-    "nw": "^0.59.0",
     "powerbi-visuals-api": "~3.8.0",
     "powerbi-visuals-utils-dataviewutils": "2.2.1",
     "react": "^16.0.2",
